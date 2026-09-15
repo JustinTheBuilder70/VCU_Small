@@ -46,74 +46,33 @@ jobs:
           "
 
   build:
-    name: Build C++ project
+    name: Build PlatformIO project
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install latest CMake and Ninja
-        uses: lukka/get-cmake@latest
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y g++ ccache
-
-      - name: Show tool versions
-        run: |
-          cmake --version
-          ninja --version
-
-      - name: Cache ccache
+      - name: Cache PlatformIO
         uses: actions/cache@v4
         with:
-          path: ~/.ccache
-          key: ${{ runner.os }}-ccache-${{ hashFiles('CMakeLists.txt', '**/CMakeLists.txt', 'cmake/**') }}
+          path: |
+            ~/.cache/pip
+            ~/.platformio/.cache
+          key: ${{ runner.os }}-pio-${{ hashFiles('platformio.ini') }}
           restore-keys: |
-            ${{ runner.os }}-ccache-
+            ${{ runner.os }}-pio-
 
-      - name: Configure
-        run: cmake -S . -B build -G Ninja -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
-
-      - name: Build
-        run: cmake --build build
-
-  test:
-    name: Run C++ tests
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install latest CMake and Ninja
-        uses: lukka/get-cmake@latest
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y g++ ccache
+      - name: Install PlatformIO Core
+        run: pip install --upgrade platformio
 
       - name: Show tool versions
-        run: |
-          cmake --version
-          ninja --version
+        run: pio --version
 
-      - name: Cache ccache
-        uses: actions/cache@v4
-        with:
-          path: ~/.ccache
-          key: ${{ runner.os }}-ccache-${{ hashFiles('CMakeLists.txt', '**/CMakeLists.txt', 'cmake/**') }}
-          restore-keys: |
-            ${{ runner.os }}-ccache-
-
-      - name: Configure
-        run: cmake -S . -B build -G Ninja -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
-
-      - name: Build
-        run: cmake --build build
-
-      - name: Test
-        run: ctest --test-dir build --output-on-failure
+      - name: Build PlatformIO project
+        run: pio run -e teensy41
