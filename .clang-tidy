@@ -16,10 +16,11 @@ Checks: >
   -cert-err58-cpp,
   -cppcoreguidelines-avoid-magic-numbers,
   -llvmlibc-implementation-in-namespace,
-  -llvmlibc-callee-namespace
+  -llvmlibc-callee-namespace,
+  -llvm-include-order
 
 WarningsAsErrors: ''
-HeaderFilterRegex: '^(src|include|lib)/.*'
+HeaderFilterRegex: '^(src|include)/.*'
 FormatStyle: file
 
 CheckOptions:

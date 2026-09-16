@@ -2,6 +2,7 @@
 #include <FlexCAN_T4.h>
 #include <SPI.h>
 #include <SoftwareSerial.h>
+#include <cstdint>
 #include "config.h"
 
 namespace velocity {
@@ -102,8 +103,9 @@ struct VCUModule {
   struct temperatureModule* temp;
 };
 
-struct VCUModule vcu_ptr;
-struct VCUModule* vcu = &vcu_ptr;
+// struct VCUModule vcu_ptr;
+// struct VCUModule* vcu = &vcu_ptr;
+struct VCUModule* vcu = new VCUModule;
 
 void systemInit() {
   struct PackModule pack_data_ptr{};
@@ -146,20 +148,24 @@ void pumpModuleUpdate() {
     return;
   }
 
-  vcu->pump->rawADC = analogRead(CURRENT_SENSOR_PIN);
-  vcu->pump->adc_scale = (float)vcu->pump->rawADC / 1023;
-  vcu->pump->current = (vcu->pump->ref - (vcu->pump->ref * vcu->pump->adc_scale)) - 0.0185;
-  vcu->pump->biasCurrent = vcu->pump->current - vcu->pump->bias;
-  vcu->pump->five_seconds = millis();
-  vcu->pump->short_time = millis();
-  vcu->pump->last_step_ms = 0;
+  auto& pump = *vcu->pump;
+
+  pump.rawADC = analogRead(CURRENT_SENSOR_PIN);
+  pump.adc_scale = static_cast<float>(pump.rawADC) / 1023;
+  pump.current = static_cast<uint8_t>((pump.ref - (pump.ref * pump.adc_scale)) - 0.0185);
+  pump.biasCurrent = static_cast<uint8_t>(static_cast<float>(pump.current) - pump.bias);
+
+  const uint32_t now = millis();
+  pump.five_seconds = now;
+  pump.short_time = now;
+  pump.last_step_ms = 0;
 
   if (millis() - vcu->pump->five_seconds >= 5000) {
     vcu->pump->target_I = vcu->pump->current;
     vcu->pump->five_seconds = millis();
   }
   if (millis() - vcu->pump->short_time >= 50) {
-    vcu->pump->error = vcu->pump->target_I - vcu->pump->current;
+    vcu->pump->error = vcu->pump->target_I - static_cast<float>(vcu->pump->current);
     if (vcu->pump->error < 0) {
       vcu->pump->error *= -1;
     }
