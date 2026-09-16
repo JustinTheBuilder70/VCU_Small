@@ -1,0 +1,93 @@
+name: C++ CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  lint:
+    name: Run C++ Linter
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+            ~/.platformio/.cache
+          key: ${{ runner.os }}-pio-${{ hashFiles('platformio.ini') }}
+          restore-keys: |
+            ${{ runner.os }}-pio-
+
+      - name: Install PlatformIO Core
+        run: pip install --upgrade platformio
+
+      - name: Install lint tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-format clang-tidy
+
+      - name: Show tool versions
+        run: |
+          pio --version
+          clang-format --version
+          clang-tidy --version
+
+      - name: Build to generate compile_commands.json
+        run: pio run -e teensy41
+
+      - name: Check C++ formatting
+        run: |
+          find src -type f \( -name '*.hpp' -o -name '*.h' -o -name '*.cpp' -o -name '*.cc' -o -name '*.cxx' \) -print0 \
+            | xargs -0 clang-format -style=file -n -Werror
+
+      - name: Verify compile_commands.json
+        run: |
+          test -f .pio/build/compile_commands.json && echo "found, entries:" && python3 -c "import json; print(len(json.load(open('.pio/build/compile_commands.json'))))"
+      
+      - name: Run clang-tidy
+        run: |
+          find src -name '*.cpp' -o -name '*.c' | xargs clang-tidy -p .pio/build --config-file=.clang-tidy
+
+  build:
+    name: Build PlatformIO project
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+            ~/.platformio/.cache
+          key: ${{ runner.os }}-pio-${{ hashFiles('platformio.ini') }}
+          restore-keys: |
+            ${{ runner.os }}-pio-
+
+      - name: Install PlatformIO Core
+        run: pip install --upgrade platformio
+
+      - name: Show tool versions
+        run: pio --version
+
+      - name: Build PlatformIO project
+        run: pio run -e teensy41
