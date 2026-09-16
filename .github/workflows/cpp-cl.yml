@@ -55,22 +55,27 @@ jobs:
       - name: Verify compile_commands.json
         run: |
           test -f .pio/build/compile_commands.json && echo "found, entries:" && python3 -c "import json; print(len(json.load(open('.pio/build/compile_commands.json'))))"
-
+      
       - name: Run clang-tidy
         run: |
           python3 -c "
           import json, subprocess, pathlib
 
           repo_root = pathlib.Path.cwd().resolve()
-          entries = json.load(open('.pio/build/compile_commands.json'))
+          compiledb_dir = repo_root / '.pio' / 'build'
+          entries = json.load(open(compiledb_dir / 'compile_commands.json'))
 
-          project_dirs = (str(repo_root / 'src'))
+          project_dir = str(repo_root / 'src')
           files = [
               e['file'] for e in entries
-              if e['file'].startswith(project_dirs)
+              if e['file'].startswith(project_dir)
           ]
           print(f'Linting {len(files)} project files (of {len(entries)} total compile entries)')
-          subprocess.run(['clang-tidy', '-p', str(repo_root)] + files, check=True)
+          subprocess.run(
+              ['clang-tidy', '-p', str(compiledb_dir),
+               f'--config-file={repo_root}/.clang-tidy'] + files,
+              check=True
+          )
           "
 
   build:
