@@ -52,13 +52,25 @@ jobs:
           find src -type f \( -name '*.hpp' -o -name '*.h' -o -name '*.cpp' -o -name '*.cc' -o -name '*.cxx' \) -print0 \
             | xargs -0 clang-format -style=file -n -Werror
 
+      - name: Verify compile_commands.json
+        run: |
+          test -f compile_commands.json && echo "found, entries:" && python3 -c "import json; print(len(json.load(open('compile_commands.json'))))"
+
       - name: Run clang-tidy
         run: |
           python3 -c "
-          import json, subprocess, sys
-          entries = json.load(open('.pio/build/compile_commands.json'))
-          files = [e['file'] for e in entries if e['file'].split('/')[-3:-2] != ['test']]  # adjust filtering as needed
-          subprocess.run(['clang-tidy', '-p', '.'] + files, check=True)
+          import json, subprocess, pathlib
+
+          repo_root = pathlib.Path.cwd().resolve()
+          entries = json.load(open('compile_commands.json'))
+
+          project_dirs = (str(repo_root / 'src')
+          files = [
+              e['file'] for e in entries
+              if e['file'].startswith(project_dirs)
+          ]
+          print(f'Linting {len(files)} project files (of {len(entries)} total compile entries)')
+          subprocess.run(['clang-tidy', '-p', str(repo_root)] + files, check=True)
           "
 
   build:
