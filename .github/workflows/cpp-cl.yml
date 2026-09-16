@@ -64,7 +64,7 @@ jobs:
           repo_root = pathlib.Path.cwd().resolve()
           entries = json.load(open('compile_commands.json'))
 
-          project_dirs = (str(repo_root / 'src')
+          project_dirs = (str(repo_root / 'src'))
           files = [
               e['file'] for e in entries
               if e['file'].startswith(project_dirs)
