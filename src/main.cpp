@@ -4,11 +4,14 @@
 #include <SoftwareSerial.h>
 #include "config.h"
 
+namespace velocity {
+namespace {
+
 FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> can0;
 
 SoftwareSerial nextion(16, 17);
 
-typedef void (*State)();
+using State = void (*)();
 State state = nullptr;
 
 struct ids {
@@ -24,7 +27,7 @@ struct ids {
 struct DTCError {
   DTC dtc;
   bool ative;
-  void (*check)(void);
+  void (*check)();
 };
 
 inline void displayWrite(const char* component, const char* label, int value, const char* unit) {
@@ -37,18 +40,18 @@ inline void displayWrite(const char* component, const char* label, int value, co
 }
 
 struct PumpModule {
-  volatile float ref = 2.58f;
-  volatile float bias = 0.555f;
+  volatile float ref = 2.58F;
+  volatile float bias = 0.555F;
   volatile int rawADC = 0;
 
-  volatile float adc_scale;
-  volatile uint8_t current;
+  volatile float adc_scale{};
+  volatile uint8_t current{};
 
-  volatile uint8_t biasCurrent;
-  volatile uint8_t temperature;
-  volatile uint8_t pwmCmd;
-  volatile float target_I;
-  volatile float error;
+  volatile uint8_t biasCurrent{};
+  volatile uint8_t temperature{};
+  volatile uint8_t pwmCmd{};
+  volatile float target_I{};
+  volatile float error{};
 
   volatile bool ampSensReady = false;
   volatile bool tempSensReady = false;
@@ -56,14 +59,14 @@ struct PumpModule {
   volatile unsigned long five_seconds = 0;
   volatile unsigned long short_time = 0;
   volatile unsigned long last_step_ms = 0;
-};
+} __attribute__((aligned(64)));
 
 struct temperatureModule {
   volatile bool thermocoupleReady = false;
-  double tempC;
-  int tempF_int;
-  double tempF;
-};
+  double tempC{};
+  int tempF_int{};
+  double tempF{};
+} __attribute__((aligned(32)));
 
 struct PackModule {
   volatile uint8_t voltage;
@@ -71,7 +74,7 @@ struct PackModule {
   volatile uint8_t soc;
   volatile uint8_t maxTemp;
   volatile uint8_t minTemp;
-};
+} __attribute__((aligned(8)));
 
 void handle(DTC dtc) {
   // Handle the error condition here
@@ -102,7 +105,7 @@ struct VCUModule {
 struct VCUModule vcu_ptr;
 struct VCUModule* vcu = &vcu_ptr;
 
-static void systemInit() {
+void systemInit() {
   struct PackModule pack_data_ptr;
   struct PumpModule pump_data_ptr;
   struct temperatureModule temp_data_ptr;
@@ -139,8 +142,9 @@ static void systemInit() {
 // }
 
 void pumpModuleUpdate() {
-  if (!vcu->pump->ampSensReady)
+  if (!vcu->pump->ampSensReady) {
     return;
+  }
 
   vcu->pump->rawADC = analogRead(CURRENT_SENSOR_PIN);
   vcu->pump->adc_scale = (float)vcu->pump->rawADC / 1023;
@@ -156,8 +160,9 @@ void pumpModuleUpdate() {
   }
   if (millis() - vcu->pump->short_time >= 50) {
     vcu->pump->error = vcu->pump->target_I - vcu->pump->current;
-    if (vcu->pump->error < 0)
+    if (vcu->pump->error < 0) {
       vcu->pump->error *= -1;
+    }
     if (vcu->pump->error > 0.5) {
       Serial.print("DO SOMETHING");
     }
@@ -173,23 +178,27 @@ void pumpModuleUpdate() {
 
 inline void onCanFrame(const CAN_message_t& msg) {
   switch (msg.id) {
-    case MSG_ID_PACK_DATA:
+    case MSG_ID_PACK_DATA: {
       vcu->pack->voltage = msg.buf[1] / 10;
       vcu->pack->avgTemp = msg.buf[0];
       vcu->pack->soc = msg.buf[2] / 2;
       vcu->pack->maxTemp = msg.buf[3];
       vcu->pack->minTemp = msg.buf[4];
       state = pumpModuleUpdate;
-      break;
 
-    case 0x0A3:
+      break;
+    }
+
+    case 0x0A3: {
       uint32_t raw = msg.buf[0];
       uint32_t raw2 = msg.buf[1];
       Serial.println(raw);
       Serial.println(raw2);
-      break;
 
-    case MSG_ID_PACK_STATUS:
+      break;
+    }
+
+    case MSG_ID_PACK_STATUS: {
       uint8_t byte0 = msg.buf[0];
       uint8_t byte1 = msg.buf[1];
 
@@ -201,14 +210,17 @@ inline void onCanFrame(const CAN_message_t& msg) {
       }
 
       break;
+    }
 
-    default:
+    default: {
       displayWrite("t0", "CAN_DC", 1, "C");
       displayWrite("t3", "X", 1, "V");
       displayWrite("t2", "X", 1, "%");
       displayWrite("t10", "X ", 1, "C");
       displayWrite("t8", "X ", 1, "C");
+
       break;
+    }
   }
 }
 
@@ -228,4 +240,15 @@ void setup() {
 
 void loop() {
   can0.events();
+}
+
+}  // namespace
+}  // namespace velocity
+
+void setup() {
+  velocity::setup();
+}
+
+void loop() {
+  velocity::loop();
 }

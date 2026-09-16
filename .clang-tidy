@@ -13,7 +13,10 @@ Checks: >
   -readability-identifier-length,
   -readability-uppercase-literal-suffix,
   -cert-dcl16-c,
-  -cert-err58-cpp
+  -cert-err58-cpp,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -llvmlibc-implementation-in-namespace,
+  -llvmlibc-callee-namespace
 
 WarningsAsErrors: ''
 HeaderFilterRegex: '^(src|include|lib)/.*'
