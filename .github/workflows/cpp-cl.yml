@@ -45,7 +45,7 @@ jobs:
           clang-tidy --version
 
       - name: Build to generate compile_commands.json
-        run: pio run -e teensy41
+        run: pio run -e teensy41 -t compiledb
 
       - name: Check C++ formatting
         run: |
@@ -56,7 +56,7 @@ jobs:
         run: |
           python3 -c "
           import json, subprocess, sys
-          entries = json.load(open('.pio/build/compile_commands.json'))
+          entries = json.load(open('compile_commands.json'))
           files = [e['file'] for e in entries if e['file'].split('/')[-3:-2] != ['test']]  # adjust filtering as needed
           subprocess.run(['clang-tidy', '-p', '.'] + files, check=True)
           "
