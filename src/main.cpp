@@ -25,11 +25,15 @@ struct ids {
   // static constexpr uint32_t STATUS_REDUN_SUPPLY_MASK = 0x1000u;
 };
 
+struct DTC {};
+
+__size_t DTC_COUNT;
+
 struct DTCError {
   DTC dtc;
   bool active;
   void (*check)();
-};
+} __attribute__((aligned(8)));
 
 inline void displayWrite(const char* component, const char* label, int value, const char* unit) {
   char buf[64];
@@ -77,7 +81,7 @@ struct PackModule {
   volatile uint8_t minTemp;
 } __attribute__((aligned(8)));
 
-void handle(DTC dtc) {
+void handle(/*DTC dtc*/) {
   // Handle the error condition here
   // For example, you can log the error, set a flag, or take corrective action
   Serial.println("Handling DTC error...");

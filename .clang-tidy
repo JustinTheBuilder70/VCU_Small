@@ -19,7 +19,10 @@ Checks: >
   -llvmlibc-callee-namespace,
   -llvm-include-order,
   -llvmlibc-restrict-system-libc-headers,
-  -fuchsia-default-arguments-calls
+  -fuchsia-default-arguments-calls,
+  -fuchsia-statically-constructed-objects,
+  -cppcoreguidelines-avoid-non-const-global-variables,
+  -hicpp-uppercase-literal-suffix
 
 WarningsAsErrors: ''
 HeaderFilterRegex: '^(src|include)/.*'
