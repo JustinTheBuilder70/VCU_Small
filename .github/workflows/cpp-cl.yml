@@ -58,25 +58,7 @@ jobs:
       
       - name: Run clang-tidy
         run: |
-          python3 -c "
-          import json, subprocess, pathlib
-
-          repo_root = pathlib.Path.cwd().resolve()
-          compiledb_dir = repo_root / '.pio' / 'build'
-          entries = json.load(open(compiledb_dir / 'compile_commands.json'))
-
-          project_dir = str(repo_root / 'src')
-          files = [
-              e['file'] for e in entries
-              if e['file'].startswith(project_dir)
-          ]
-          print(f'Linting {len(files)} project files (of {len(entries)} total compile entries)')
-          subprocess.run(
-              ['clang-tidy', '-p', str(compiledb_dir),
-               f'--config-file={repo_root}/.clang-tidy'] + files,
-              check=True
-          )
-          "
+          find src -name '*.cpp' -o -name '*.c' | xargs clang-tidy -p .pio/build --config-file=.clang-tidy
 
   build:
     name: Build PlatformIO project
