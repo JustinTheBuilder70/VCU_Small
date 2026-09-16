@@ -1,2 +1,5 @@
 CompileFlags:
   CompilationDatabase: .pio/build
+  
+Diagnostics:
+  Suppress: ["invalid-constexpr", "clang-diagnostic-invalid-constexpr"]
