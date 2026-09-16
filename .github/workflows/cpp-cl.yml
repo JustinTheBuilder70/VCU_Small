@@ -54,7 +54,7 @@ jobs:
 
       - name: Verify compile_commands.json
         run: |
-          test -f compile_commands.json && echo "found, entries:" && python3 -c "import json; print(len(json.load(open('compile_commands.json'))))"
+          test -f .pio/build/compile_commands.json && echo "found, entries:" && python3 -c "import json; print(len(json.load(open('.pio/build/compile_commands.json'))))"
 
       - name: Run clang-tidy
         run: |
