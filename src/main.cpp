@@ -1,8 +1,8 @@
+#include <Adafruit_MAX31855.h>
 #include <FlexCAN_T4.h>
 #include <SPI.h>
-#include "config.h" 
-#include <Adafruit_MAX31855.h>
 #include <SoftwareSerial.h>
+#include "config.h"
 
 FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> can0;
 
@@ -11,9 +11,7 @@ SoftwareSerial nextion(16, 17);
 typedef void (*State)();
 State state = nullptr;
 
-
-
-struct ids{
+struct ids {
   static constexpr uint32_t pack_data = 0x00A0;
   static constexpr uint32_t pack_status = 0x00A1;
   static constexpr uint32_t vsm_state = 0x00A2;
@@ -21,17 +19,15 @@ struct ids{
 
   static constexpr uint32_t STATUS_VOLT_TOO_HIGH_MASK = 0x0020u;
   static constexpr uint32_t STATUS_REDUN_SUPPLY_MASK = 0x1000u;
-
 };
 
-struct DTCError{
+struct DTCError {
   DTC dtc;
   bool ative;
   void (*check)(void);
 };
 
-
-inline void displayWrite(const char *component, const char *label, int value, const char *unit) {
+inline void displayWrite(const char* component, const char* label, int value, const char* unit) {
   char buf[64];
   snprintf(buf, sizeof(buf), "%s.txt=\"%s %d %s\"", component, label, value, unit);
   nextion.print(buf);
@@ -40,8 +36,7 @@ inline void displayWrite(const char *component, const char *label, int value, co
   nextion.write(0xFF);
 }
 
-
-struct PumpModule{
+struct PumpModule {
   volatile float ref = 2.58f;
   volatile float bias = 0.555f;
   volatile int rawADC = 0;
@@ -60,24 +55,23 @@ struct PumpModule{
 
   volatile unsigned long five_seconds = 0;
   volatile unsigned long short_time = 0;
-  volatile unsigned long last_step_ms = 0;  
+  volatile unsigned long last_step_ms = 0;
 };
 
-
-struct temperatureModule{
+struct temperatureModule {
   volatile bool thermocoupleReady = false;
   double tempC;
   int tempF_int;
   double tempF;
 };
 
-struct PackModule{
+struct PackModule {
   volatile uint8_t voltage;
   volatile uint8_t avgTemp;
   volatile uint8_t soc;
   volatile uint8_t maxTemp;
   volatile uint8_t minTemp;
-}; 
+};
 
 void handle(DTC dtc) {
   // Handle the error condition here
@@ -85,8 +79,7 @@ void handle(DTC dtc) {
   Serial.println("Handling DTC error...");
 }
 
-
-struct VCUModule{
+struct VCUModule {
   volatile uint8_t vcuState;
   volatile uint8_t vcuFault;
   volatile uint8_t vcuError;
@@ -94,28 +87,26 @@ struct VCUModule{
 
   volatile uint8_t canbusOperational;
   struct DTCError dtc;
-  struct DTCError dtcErrors[DTC_COUNT] = {
-    {STATUS_VOLT_TOO_HIGH_MASK, false, handle},
-    {STATUS_REDUN_SUPPLY_MASK, false, handle},  
-    {VSM_STATE_MASK, false, nullptr},
-    {VSM_STATE_DRIVE_ENABLED, false, nullptr},
-    {VSM_STATE_FAULT, false, nullptr},
-    {FAULT_FLAGS_BIT0, false, nullptr}
-  };
-  
-  struct PackModule *pack;
-  struct PumpModule *pump;
-  struct temperatureModule *temp;
+  struct DTCError dtcErrors[DTC_COUNT] = {{STATUS_VOLT_TOO_HIGH_MASK, false, handle},
+                                          {STATUS_REDUN_SUPPLY_MASK, false, handle},
+                                          {VSM_STATE_MASK, false, nullptr},
+                                          {VSM_STATE_DRIVE_ENABLED, false, nullptr},
+                                          {VSM_STATE_FAULT, false, nullptr},
+                                          {FAULT_FLAGS_BIT0, false, nullptr}};
+
+  struct PackModule* pack;
+  struct PumpModule* pump;
+  struct temperatureModule* temp;
 };
 
 struct VCUModule vcu_ptr;
-struct VCUModule *vcu = &vcu_ptr;
+struct VCUModule* vcu = &vcu_ptr;
 
 static void systemInit() {
   struct PackModule pack_data_ptr;
   struct PumpModule pump_data_ptr;
   struct temperatureModule temp_data_ptr;
-  
+
   vcu->pack = &pack_data_ptr;
   vcu->pump = &pump_data_ptr;
   vcu->temp = &temp_data_ptr;
@@ -148,7 +139,8 @@ static void systemInit() {
 // }
 
 void pumpModuleUpdate() {
-  if (!vcu->pump->ampSensReady) return;
+  if (!vcu->pump->ampSensReady)
+    return;
 
   vcu->pump->rawADC = analogRead(CURRENT_SENSOR_PIN);
   vcu->pump->adc_scale = (float)vcu->pump->rawADC / 1023;
@@ -164,7 +156,8 @@ void pumpModuleUpdate() {
   }
   if (millis() - vcu->pump->short_time >= 50) {
     vcu->pump->error = vcu->pump->target_I - vcu->pump->current;
-    if (vcu->pump->error < 0 ) vcu->pump->error *= -1;
+    if (vcu->pump->error < 0)
+      vcu->pump->error *= -1;
     if (vcu->pump->error > 0.5) {
       Serial.print("DO SOMETHING");
     }
@@ -175,26 +168,26 @@ void pumpModuleUpdate() {
     vcu->pump->pwmCmd = constrain(vcu->pump->pwmCmd, PWM_MAX, PWM_MIN);
     analogWrite(PWM_PIN, vcu->pump->pwmCmd);
     vcu->pump->last_step_ms = millis();
-  }  
+  }
 }
 
-inline void onCanFrame(const CAN_message_t &msg) {
+inline void onCanFrame(const CAN_message_t& msg) {
   switch (msg.id) {
     case MSG_ID_PACK_DATA:
       vcu->pack->voltage = msg.buf[1] / 10;
-      vcu->pack->avgTemp = msg.buf[0]; 
+      vcu->pack->avgTemp = msg.buf[0];
       vcu->pack->soc = msg.buf[2] / 2;
       vcu->pack->maxTemp = msg.buf[3];
       vcu->pack->minTemp = msg.buf[4];
       state = pumpModuleUpdate;
-    break;
+      break;
 
     case 0x0A3:
       uint32_t raw = msg.buf[0];
       uint32_t raw2 = msg.buf[1];
       Serial.println(raw);
       Serial.println(raw2);
-    break;
+      break;
 
     case MSG_ID_PACK_STATUS:
       uint8_t byte0 = msg.buf[0];
@@ -207,16 +200,16 @@ inline void onCanFrame(const CAN_message_t &msg) {
         displayWrite("t4", "REDUN SUPPLY", 0, "X");
       }
 
-    break;
+      break;
 
-    default: 
-      displayWrite("t0","CAN_DC", 1, "C");
+    default:
+      displayWrite("t0", "CAN_DC", 1, "C");
       displayWrite("t3", "X", 1, "V");
       displayWrite("t2", "X", 1, "%");
       displayWrite("t10", "X ", 1, "C");
       displayWrite("t8", "X ", 1, "C");
       break;
-  } 
+  }
 }
 
 void setup() {
@@ -235,6 +228,4 @@ void setup() {
 
 void loop() {
   can0.events();
-  
- 
 }
