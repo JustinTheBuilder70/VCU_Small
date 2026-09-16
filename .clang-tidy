@@ -17,7 +17,8 @@ Checks: >
   -cppcoreguidelines-avoid-magic-numbers,
   -llvmlibc-implementation-in-namespace,
   -llvmlibc-callee-namespace,
-  -llvm-include-order
+  -llvm-include-order,
+  -llvmlibc-restrict-system-libc-headers
 
 WarningsAsErrors: ''
 HeaderFilterRegex: '^(src|include)/.*'

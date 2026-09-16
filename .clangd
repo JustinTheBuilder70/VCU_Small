@@ -1,5 +1,9 @@
 CompileFlags:
   CompilationDatabase: .pio/build
-  
+  Add: 
+    - -ferror-limit=0
+    # - -isystem
+    # - /home/bailey/.platformio/packages/framework-arduinoteensy/cores/teensy4
+
 Diagnostics:
-  Suppress: ["invalid-constexpr", "clang-diagnostic-invalid-constexpr"]
+  Suppress: ["invalid-constexpr", "clang-diagnostic-invalid-constexpr", "ovl_diff_return_type"]
