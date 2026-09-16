@@ -62,7 +62,7 @@ jobs:
           import json, subprocess, pathlib
 
           repo_root = pathlib.Path.cwd().resolve()
-          entries = json.load(open('compile_commands.json'))
+          entries = json.load(open('.pio/build/compile_commands.json'))
 
           project_dirs = (str(repo_root / 'src'))
           files = [
