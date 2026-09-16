@@ -15,21 +15,37 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install latest CMake and Ninja
-        uses: lukka/get-cmake@latest
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+            ~/.platformio/.cache
+          key: ${{ runner.os }}-pio-${{ hashFiles('platformio.ini') }}
+          restore-keys: |
+            ${{ runner.os }}-pio-
+
+      - name: Install PlatformIO Core
+        run: pip install --upgrade platformio
 
       - name: Install lint tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang-format clang-tidy g++ ccache
+          sudo apt-get install -y clang-format clang-tidy
 
       - name: Show tool versions
         run: |
-          cmake --version
-          ninja --version
+          pio --version
+          clang-format --version
+          clang-tidy --version
 
-      - name: Configure build for compile commands
-        run: cmake -S . -B build -G Ninja -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+      - name: Build to generate compile_commands.json
+        run: pio run -e teensy41
 
       - name: Check C++ formatting
         run: |
@@ -40,9 +56,9 @@ jobs:
         run: |
           python3 -c "
           import json, subprocess, sys
-          entries = json.load(open('build/compile_commands.json'))
+          entries = json.load(open('compile_commands.json'))
           files = [e['file'] for e in entries if e['file'].split('/')[-3:-2] != ['test']]  # adjust filtering as needed
-          subprocess.run(['clang-tidy', '-p', 'build'] + files, check=True)
+          subprocess.run(['clang-tidy', '-p', '.'] + files, check=True)
           "
 
   build:
