@@ -20,13 +20,13 @@ struct ids {
   static constexpr uint32_t vsm_state = 0x00A2;
   static constexpr uint32_t fault_flags = 0x00A4;
 
-  static constexpr uint32_t STATUS_VOLT_TOO_HIGH_MASK = 0x0020u;
-  static constexpr uint32_t STATUS_REDUN_SUPPLY_MASK = 0x1000u;
+  // static constexpr uint32_t STATUS_VOLT_TOO_HIGH_MASK = 0x0020u;
+  // static constexpr uint32_t STATUS_REDUN_SUPPLY_MASK = 0x1000u;
 };
 
 struct DTCError {
   DTC dtc;
-  bool ative;
+  bool active;
   void (*check)();
 };
 
@@ -56,9 +56,9 @@ struct PumpModule {
   volatile bool ampSensReady = false;
   volatile bool tempSensReady = false;
 
-  volatile unsigned long five_seconds = 0;
-  volatile unsigned long short_time = 0;
-  volatile unsigned long last_step_ms = 0;
+  volatile uint32_t five_seconds = 0;
+  volatile uint32_t short_time = 0;
+  volatile uint32_t last_step_ms = 0;
 } __attribute__((aligned(64)));
 
 struct temperatureModule {
@@ -106,7 +106,7 @@ struct VCUModule vcu_ptr;
 struct VCUModule* vcu = &vcu_ptr;
 
 void systemInit() {
-  struct PackModule pack_data_ptr;
+  struct PackModule pack_data_ptr{};
   struct PumpModule pump_data_ptr;
   struct temperatureModule temp_data_ptr;
 
@@ -202,10 +202,10 @@ inline void onCanFrame(const CAN_message_t& msg) {
       uint8_t byte0 = msg.buf[0];
       uint8_t byte1 = msg.buf[1];
 
-      if (byte0 & STATUS_VOLT_TOO_HIGH_MASK) {
+      if ((byte0 & STATUS_VOLT_TOO_HIGH_MASK) != 0U) {
         displayWrite("t4", "VOLT TOO HIGH", 0, "X");
       }
-      if (byte1 & STATUS_REDUN_SUPPLY_MASK) {
+      if ((byte1 & STATUS_REDUN_SUPPLY_MASK) != 0U) {
         displayWrite("t4", "REDUN SUPPLY", 0, "X");
       }
 
